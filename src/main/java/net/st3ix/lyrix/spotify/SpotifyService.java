@@ -149,7 +149,46 @@ public final class SpotifyService {
 	}
 
 	public void play(TrackResult track) {
-		command(() -> api.play(track.uri()));
+		executor.execute(() -> {
+			try {
+				String device = pickDevice();
+				api.play(track.uri(), device);
+				if (!startedPlaying(track)) {
+					api.play(track.uri(), device);
+					if (!startedPlaying(track)) {
+						PlaybackState s = api.player();
+						if (s != null && track.uri().equals(s.trackUri()) && !s.playing()) api.resume();
+					}
+				}
+				info("Playing " + track.title());
+				pollSoon();
+			} catch (Exception e) {
+				setError(e.getMessage());
+			}
+		});
+	}
+
+	private String pickDevice() throws Exception {
+		List<Device> list = api.devices();
+		if (list.isEmpty()) {
+			throw new SpotifyApi.ApiException("No Spotify device found. Open Spotify on your PC or phone first.");
+		}
+		for (Device d : list) {
+			if (d.active()) return d.id();
+		}
+		return list.get(0).id();
+	}
+
+	private boolean startedPlaying(TrackResult track) throws Exception {
+		for (int i = 0; i < 4; i++) {
+			Thread.sleep(400);
+			PlaybackState s = api.player();
+			if (s != null && track.uri().equals(s.trackUri()) && s.playing()) {
+				current = s;
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public void togglePlay() {

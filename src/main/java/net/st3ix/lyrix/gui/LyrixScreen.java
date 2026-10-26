@@ -107,14 +107,15 @@ public final class LyrixScreen extends Screen {
 	}
 
 	private void switchTab(Tab t) {
+		searchInput.setFocused(t == Tab.SEARCH);
 		if (t == tab) return;
 		tab = t;
 		tabChangedAt = System.currentTimeMillis();
-		searchInput.setFocused(t == Tab.SEARCH);
 		onTabOpened();
 	}
 
 	private void onTabOpened() {
+		if (tab == Tab.SEARCH) searchInput.setFocused(true);
 		if (tab == Tab.QUEUE) refreshQueue();
 		if (tab == Tab.DEVICES) refreshDevices();
 		if (tab == Tab.LYRICS) lyricsUserScrollAt = 0;
@@ -762,6 +763,16 @@ public final class LyrixScreen extends Screen {
 			ry = step(g, x, ry, w, "4", "Click Connect and allow access in your browser.");
 			button(g, mx, my, x + 24, ry, 150, 22, "Connect with Spotify", true, auth::startLogin);
 			ry += 30;
+
+			int bw = 76;
+			UiDraw.roundRect(g, x, ry, x + w, ry + 28, 9, 0xFF1C2433);
+			UiDraw.icon(g, Icon.LINK, x + 8, ry + 8, 12, 0xFF7AA7FF);
+			UiDraw.text(g, "Not sure how to connect?", x + 26, ry + 5, UiDraw.WHITE);
+			UiDraw.scaledText(g, Fonts.ui(UiDraw.ellipsize("The docs walk you through it step by step.", (int) ((w - bw - 40) / 0.8f))),
+					x + 26, ry + 16, 0.8f, UiDraw.GRAY, false);
+			button(g, mx, my, x + w - bw - 5, ry + 4, bw, 20, "Open guide", false,
+					() -> Util.getPlatform().openUri(URI.create(SETUP_GUIDE)));
+			ry += 34;
 		}
 		String status = auth.status();
 		if (!status.isEmpty()) {
@@ -769,6 +780,7 @@ public final class LyrixScreen extends Screen {
 		}
 	}
 
+	private static final String SETUP_GUIDE = "https://docs.st3ix.net/docs/plugins/lyrix/spotify-setup";
 	private static final String DISCORD_URL = "https://discord.gg/6NQe7SaZtC";
 	private static final String DISCORD_FALLBACK = "https://st3ix.net/discord";
 

@@ -67,7 +67,19 @@ public final class SpotifyApi {
 	}
 
 	public List<TrackResult> search(String query) throws Exception {
-		HttpResponse<String> res = send("GET", "/search?type=track&limit=25&q=" + SpotifyAuth.enc(query), null);
+		List<TrackResult> all = new ArrayList<>(searchPage(query, 0));
+		if (all.size() >= 10) {
+			try {
+				all.addAll(searchPage(query, 10));
+			} catch (Exception ignored) {
+			}
+		}
+		return all;
+	}
+
+	private List<TrackResult> searchPage(String query, int offset) throws Exception {
+		HttpResponse<String> res = send("GET", "/search?type=track&limit=10&offset=" + offset
+				+ "&q=" + SpotifyAuth.enc(query), null);
 		check(res);
 		JsonArray items = JsonParser.parseString(res.body()).getAsJsonObject()
 				.getAsJsonObject("tracks").getAsJsonArray("items");
@@ -101,8 +113,9 @@ public final class SpotifyApi {
 		return !arr.isEmpty() && arr.get(0).getAsBoolean();
 	}
 
-	public void play(String trackUri) throws Exception {
-		check(send("PUT", "/me/player/play", "{\"uris\":[\"" + trackUri + "\"]}"));
+	public void play(String trackUri, String deviceId) throws Exception {
+		String path = "/me/player/play" + (deviceId != null ? "?device_id=" + SpotifyAuth.enc(deviceId) : "");
+		check(send("PUT", path, "{\"uris\":[\"" + trackUri + "\"],\"position_ms\":0}"));
 	}
 
 	public void resume() throws Exception {
