@@ -24,7 +24,12 @@ public final class LyricsManager {
 		}
 	};
 
+	private final Map<String, Long> matchDiffs = new java.util.concurrent.ConcurrentHashMap<>();
 	private volatile String trackId;
+
+	public Long matchDiffMs(String id) {
+		return id == null ? null : matchDiffs.get(id);
+	}
 	private volatile Lyrics lyrics;
 	private volatile Status status = Status.NONE;
 
@@ -56,13 +61,14 @@ public final class LyricsManager {
 		String id = state.trackId();
 		executor.execute(() -> {
 			try {
-				String lrc = client.fetchSynced(state.title(), state.artist(), state.album(), state.durationMs());
+				LrcLibClient.Found found = client.fetchSynced(state.title(), state.artist(), state.album(), state.durationMs());
 				if (!id.equals(trackId)) return;
-				if (lrc == null) {
+				if (found == null) {
 					status = Status.NOT_FOUND;
 					return;
 				}
-				Lyrics parsed = LrcParser.parse(lrc, state.durationMs());
+				matchDiffs.put(id, Math.round(found.durationSec() * 1000 - state.durationMs()));
+				Lyrics parsed = LrcParser.parse(found.lrc(), state.durationMs());
 				if (parsed.lines().isEmpty()) {
 					status = Status.NOT_FOUND;
 					return;

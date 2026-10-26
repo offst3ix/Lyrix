@@ -19,7 +19,6 @@ import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Vector3f;
-import org.joml.Vector3fc;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -144,7 +143,7 @@ public final class WorldLyrics {
 				trackId = state.trackId();
 				lastLine = lastWord = -1;
 			}
-			long t = state.progressNow() + cfg.syncOffsetMs;
+			long t = state.progressNow() + cfg.offsetFor(state.trackId());
 			long realNow = System.currentTimeMillis();
 			boolean paused = realNow - lastUpdateAt > 500;
 			if (t < lastT - 1500 || (paused && t > lastT + 1500)) {
@@ -201,9 +200,9 @@ public final class WorldLyrics {
 		}
 
 		Vec3 eye = camera.position();
-		Vector3fc fwd = camera.forwardVector();
-		Vector3fc up = camera.upVector();
-		Vector3f right = new Vector3f(camera.leftVector()).negate();
+		Vector3f fwd = new Vector3f(0, 0, -1).rotate(camera.rotation());
+		Vector3f up = new Vector3f(0, 1, 0).rotate(camera.rotation());
+		Vector3f right = new Vector3f(1, 0, 0).rotate(camera.rotation());
 		float dist = cfg.worldDistance;
 		float spreadX = 1.8f * cfg.worldSpread * dist / 5f;
 		float spreadY = 0.9f * cfg.worldSpread * dist / 5f;
@@ -234,7 +233,7 @@ public final class WorldLyrics {
 
 	private void spawnLine(Lyrics.Line line, int index, Camera camera, long now, ModConfig cfg) {
 		Vec3 eye = camera.position();
-		Vector3fc fwd = camera.forwardVector();
+		Vector3f fwd = new Vector3f(0, 0, -1).rotate(camera.rotation());
 		Vec3 pos = eye.add(fwd.x() * cfg.worldDistance, fwd.y() * cfg.worldDistance + 0.4, fwd.z() * cfg.worldDistance);
 		long typeMs = Math.max(200, line.end() - line.start()) / 2;
 		placed.add(new Placed(line.text(), pos, index, now, 0.8f, typeMs));

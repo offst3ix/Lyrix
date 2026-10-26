@@ -28,6 +28,7 @@ public final class LyricsHud implements HudElement {
 		if (state == null) return;
 
 		int[] card = drawCard(g, state, cfg);
+		if (cfg.showSyncInfo) drawSyncInfo(g, state, card, cfg);
 		if (!cfg.enabled) return;
 
 		LyricsManager lm = LyrixClient.lyrics();
@@ -39,7 +40,7 @@ public final class LyricsHud implements HudElement {
 			}
 			return;
 		}
-		long t = state.progressNow() + cfg.syncOffsetMs;
+		long t = state.progressNow() + cfg.offsetFor(state.trackId());
 		switch (cfg.displayMode) {
 			case TOP -> drawTop(g, lyrics, t, cfg);
 			case LEFT -> drawSide(g, lyrics, t, cfg, false);
@@ -47,6 +48,63 @@ public final class LyricsHud implements HudElement {
 			default -> {
 			}
 		}
+	}
+
+	private void drawSyncInfo(GuiGraphics g, PlaybackState s, int[] card, ModConfig cfg) {
+		var sp = LyrixClient.spotify();
+		LyricsManager lm = LyrixClient.lyrics();
+		long drift = sp.lastDriftMs();
+		Long match = lm.matchDiffMs(s.trackId());
+		int song = cfg.songOffset(s.trackId());
+		int total = cfg.offsetFor(s.trackId());
+
+		String[] parts = {
+				"Pos " + timeTenths(s.progressNow()),
+				"Drift " + seconds(drift),
+				"Ping " + sp.lastRttMs() + " ms",
+				"Offset " + seconds(total) + (song != 0 ? " (song " + seconds(song) + ")" : ""),
+				"Match " + (match == null ? "-" : seconds(match))
+		};
+		int[] colors = {
+				0xFFD0D0D0,
+				Math.abs(drift) < 300 ? UiDraw.GREEN_LIGHT : Math.abs(drift) < 1000 ? 0xFFFFC857 : UiDraw.RED,
+				sp.lastRttMs() < 400 ? UiDraw.GREEN_LIGHT : 0xFFFFC857,
+				total == 0 ? 0xFFD0D0D0 : 0xFF7AA7FF,
+				match == null ? 0xFF8A8A8A : Math.abs(match) < 1000 ? UiDraw.GREEN_LIGHT : Math.abs(match) < 2500 ? 0xFFFFC857 : UiDraw.RED
+		};
+
+		float sc = 0.72f;
+		String sep = "   ";
+		int textW = 0;
+		for (String p : parts) textW += UiDraw.width(p);
+		textW += UiDraw.width(sep) * (parts.length - 1);
+		int w = Math.round(textW * sc) + 14, h = 12;
+		boolean bottom = cfg.cardCorner == ModConfig.Corner.BOTTOM_LEFT || cfg.cardCorner == ModConfig.Corner.BOTTOM_RIGHT;
+		boolean right = cfg.cardCorner == ModConfig.Corner.TOP_RIGHT || cfg.cardCorner == ModConfig.Corner.BOTTOM_RIGHT;
+		int x, y;
+		if (card != null) {
+			x = right ? card[2] - w : card[0];
+			y = bottom ? card[1] - h - 20 : card[3] + 20;
+		} else {
+			x = MARGIN;
+			y = MARGIN;
+		}
+		x = Math.max(2, Math.min(x, g.guiWidth() - w - 2));
+		UiDraw.roundRect(g, x, y, x + w, y + h, 6, 0xC0101010);
+		float cx = x + 7;
+		for (int i = 0; i < parts.length; i++) {
+			UiDraw.scaledText(g, Fonts.ui(parts[i]), cx, y + 3, sc, colors[i], false);
+			cx += UiDraw.width(parts[i] + (i < parts.length - 1 ? sep : "")) * sc;
+		}
+	}
+
+	private static String seconds(long ms) {
+		return (ms > 0 ? "+" : ms < 0 ? "-" : "") + String.format(java.util.Locale.ROOT, "%.2f s", Math.abs(ms) / 1000.0);
+	}
+
+	private static String timeTenths(long ms) {
+		long t = Math.max(0, ms);
+		return (t / 60000) + ":" + String.format(java.util.Locale.ROOT, "%04.1f", (t % 60000) / 1000.0);
 	}
 
 	private int[] drawCard(GuiGraphics g, PlaybackState s, ModConfig cfg) {

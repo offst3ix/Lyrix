@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
 public final class SpotifyService {
-	private static final long POLL_PLAYING_MS = 2000;
+	private static final long POLL_PLAYING_MS = 1500;
+	private static final long SMOOTH_MS = 250;
 	private static final long POLL_IDLE_MS = 2500;
 
 	private final SpotifyAuth auth = new SpotifyAuth();
@@ -31,7 +32,22 @@ public final class SpotifyService {
 	private volatile boolean messageIsError;
 	private volatile long trackChangedAt;
 	private volatile long ignoreUpdatesUntil;
+	private volatile long lastDriftMs;
+	private volatile long lastRttMs;
+	private volatile long lastPollAt;
 	private long nextPollAt;
+
+	public long lastDriftMs() {
+		return lastDriftMs;
+	}
+
+	public long lastRttMs() {
+		return lastRttMs;
+	}
+
+	public long lastPollAt() {
+		return lastPollAt;
+	}
 
 	public SpotifyService(LyricsManager lyrics) {
 		this.lyrics = lyrics;
@@ -76,8 +92,22 @@ public final class SpotifyService {
 	private void poll() {
 		long delay = POLL_IDLE_MS;
 		try {
+			long before = System.nanoTime();
 			PlaybackState state = api.player();
+			lastRttMs = (System.nanoTime() - before) / 1_000_000L;
+			lastPollAt = System.currentTimeMillis();
 			PlaybackState old = current;
+			if (old != null && state != null && old.trackId().equals(state.trackId()) && old.playing() && state.playing()) {
+				long drift = state.progressNow() - old.progressNow();
+				lastDriftMs = drift;
+				if (Math.abs(drift) < SMOOTH_MS) {
+					state = new PlaybackState(state.trackId(), state.trackUri(), state.title(), state.artist(), state.album(),
+							state.durationMs(), old.progressMs(), true, old.fetchedNanos(), state.coverUrl(),
+							state.deviceName(), state.volume(), state.shuffle(), state.repeat());
+				}
+			} else {
+				lastDriftMs = 0;
+			}
 			if (System.currentTimeMillis() < ignoreUpdatesUntil && old != null && state != null && old.trackId().equals(state.trackId())) {
 				state = new PlaybackState(state.trackId(), state.trackUri(), state.title(), state.artist(), state.album(),
 						state.durationMs(), state.progressMs(), state.playing(), state.fetchedNanos(), state.coverUrl(),

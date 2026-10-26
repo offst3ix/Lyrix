@@ -59,7 +59,22 @@ public final class Icons {
 	public static final class SmoothTexture extends DynamicTexture {
 		public SmoothTexture(String name, NativeImage image) {
 			super(() -> name, image);
-			this.sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+			try {
+				this.sampler = RenderSystem.getSamplerCache().getClampToEdge(FilterMode.LINEAR);
+			} catch (LinkageError oldVersion) {
+				legacySmooth(this);
+			}
+		}
+
+		private static void legacySmooth(net.minecraft.client.renderer.texture.AbstractTexture texture) {
+			try {
+				String name = net.fabricmc.loader.api.FabricLoader.getInstance().getMappingResolver()
+						.mapMethodName("intermediary", "net.minecraft.class_1044", "method_4527", "(ZZ)V");
+				java.lang.reflect.Method m = net.minecraft.client.renderer.texture.AbstractTexture.class.getMethod(name, boolean.class, boolean.class);
+				m.invoke(texture, true, false);
+			} catch (Exception e) {
+				LyrixClient.LOGGER.debug("No smooth filtering for textures", e);
+			}
 		}
 	}
 

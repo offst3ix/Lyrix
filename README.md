@@ -4,7 +4,7 @@
 
 **Live, synced lyrics of your Spotify song, right inside Minecraft.**
 
-Fabric · Minecraft 1.21.11 · Client-side
+Fabric · Minecraft 1.21.10 – 1.21.11 · Client-side
 
 [Documentation](https://docs.st3ix.net/docs/plugins/lyrix) · [Discord](https://discord.gg/6NQe7SaZtC) · [st3ix.net](https://st3ix.net)
 
@@ -30,9 +30,9 @@ look (like a TikTok edit), or sit in a clean HUD at the top, left or right.
 
 | | |
 |---|---|
-| Minecraft | 1.21.11 |
+| Minecraft | 1.21.10 or 1.21.11 |
 | Mod loader | [Fabric Loader](https://fabricmc.net) 0.20.1+ |
-| Dependency | [Fabric API](https://modrinth.com/mod/fabric-api) |
+| Dependency | [Fabric API](https://modrinth.com/mod/fabric-api) 0.137.0+ |
 | Java | 21+ |
 | Spotify | Any account. Controlling playback needs Premium |
 

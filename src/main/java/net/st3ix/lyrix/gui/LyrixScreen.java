@@ -313,17 +313,27 @@ public final class LyrixScreen extends Screen {
 		UiDraw.scaledText(g, Fonts.ui(UiDraw.ellipsize(s.title(), (int) ((w - 150) / 1.3f))), x, y + 2, 1.3f, UiDraw.WHITE, false);
 		UiDraw.text(g, UiDraw.ellipsize(s.artist(), w - 150), x, y + 17, UiDraw.GRAY);
 
-		String off = (cfg.syncOffsetMs > 0 ? "+" : "") + cfg.syncOffsetMs + " ms";
+		String id = s.trackId();
+		int songOff = cfg.songOffset(id);
+		String off = (songOff > 0 ? "+" : "") + songOff + " ms";
 		smallButton(g, mx, my, x + w - 126, y + 4, 26, "-0.1", () -> {
-			cfg.syncOffsetMs = Math.max(-3000, cfg.syncOffsetMs - 100);
+			cfg.setSongOffset(id, cfg.songOffset(id) - 100);
 			ModConfig.save();
 		});
-		UiDraw.textCentered(g, off, x + w - 74, y + 9, cfg.syncOffsetMs == 0 ? UiDraw.DIM : UiDraw.GREEN);
+		boolean offHover = UiDraw.inside(mx, my, x + w - 98, y + 4, x + w - 50, y + 18);
+		UiDraw.textCentered(g, off, x + w - 74, y + 8, songOff == 0 ? UiDraw.DIM : offHover ? UiDraw.WHITE : UiDraw.GREEN);
+		if (songOff != 0) hit(x + w - 98, y + 4, x + w - 50, y + 18, () -> {
+			cfg.setSongOffset(id, 0);
+			ModConfig.save();
+		});
 		smallButton(g, mx, my, x + w - 48, y + 4, 26, "+0.1", () -> {
-			cfg.syncOffsetMs = Math.min(3000, cfg.syncOffsetMs + 100);
+			cfg.setSongOffset(id, cfg.songOffset(id) + 100);
 			ModConfig.save();
 		});
-		UiDraw.scaledText(g, Fonts.ui("SYNC"), x + w - 84, y + 20, 0.65f, UiDraw.DIM, false);
+		String label = cfg.syncOffsetMs == 0 ? "THIS SONG"
+				: "THIS SONG  (ALL: " + (cfg.syncOffsetMs > 0 ? "+" : "") + cfg.syncOffsetMs + " ms)";
+		float lw = UiDraw.width(label) * 0.6f;
+		UiDraw.scaledText(g, Fonts.ui(label), x + w - 74 - lw / 2f, y + 20, 0.6f, UiDraw.DIM, false);
 
 		int listY = y + 34, listH = h - 34;
 		UiDraw.roundRect(g, x - 4, listY - 2, x + w + 4, y + h + 2, 10, 0xFF181818);
@@ -332,7 +342,7 @@ public final class LyrixScreen extends Screen {
 			UiDraw.textCentered(g, lm.statusText(), x + w / 2, listY + listH / 2 - 4, UiDraw.GRAY);
 			return;
 		}
-		long t = s.progressNow() + cfg.syncOffsetMs;
+		long t = s.progressNow() + cfg.offsetFor(s.trackId());
 		int current = lyrics.lineAt(t);
 		int anchor = current >= 0 ? current : lyrics.lastStartedLine(t);
 		int rowH = 16;
@@ -357,7 +367,7 @@ public final class LyrixScreen extends Screen {
 				if (cur) UiDraw.roundRect(g, x, ry - 1, x + 3, ry + rowH - 3, 1, UiDraw.GREEN);
 				UiDraw.scaledText(g, c, x + 8, ry + (rowH - 9 * sc) / 2f - 1, sc, color, false);
 				long start = line.start();
-				hit(x, ry, x + w, ry + rowH, () -> sp.seek(Math.max(0, start - cfg.syncOffsetMs)));
+				hit(x, ry, x + w, ry + rowH, () -> sp.seek(Math.max(0, start - cfg.offsetFor(s.trackId()))));
 			}
 			ry += rowH;
 		}
@@ -560,7 +570,8 @@ public final class LyrixScreen extends Screen {
 		ry = cycle(g, mx, my, x, ry, w, "Effect", () -> c.effect.label, d -> c.effect = next(ModConfig.Effect.values(), c.effect, d));
 		ry = toggle(g, mx, my, x, ry, w, "Fade out", () -> c.fadeOut, v -> c.fadeOut = v);
 		ry = slider(g, mx, my, x, ry, w, "Animation speed", 80, 800, () -> c.animationMs, v -> c.animationMs = (int) Math.round(v / 10) * 10, v -> (int) v + " ms");
-		ry = slider(g, mx, my, x, ry, w, "Sync offset", -2000, 2000, () -> c.syncOffsetMs, v -> c.syncOffsetMs = (int) Math.round(v / 50) * 50,
+		ry = toggle(g, mx, my, x, ry, w, "Show sync info", () -> c.showSyncInfo, v -> c.showSyncInfo = v);
+		ry = slider(g, mx, my, x, ry, w, "Sync offset (all songs)", -2000, 2000, () -> c.syncOffsetMs, v -> c.syncOffsetMs = (int) Math.round(v / 50) * 50,
 				v -> ((int) v > 0 ? "+" : "") + (int) v + " ms");
 		ry = slider(g, mx, my, x, ry, w, "Word timing", 0, 1, () -> c.wordPacing, v -> c.wordPacing = (float) (Math.round(v * 20) / 20.0),
 				v -> v < 0.15 ? "Calm" : v > 0.85 ? "Fast" : Math.round(v * 100) + "%", () -> {

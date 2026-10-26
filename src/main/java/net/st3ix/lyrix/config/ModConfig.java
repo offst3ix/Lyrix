@@ -54,6 +54,8 @@ public class ModConfig {
 	public boolean fadeOut = true;
 	public int animationMs = 280;
 	public int syncOffsetMs = 0;
+	public java.util.Map<String, Integer> songOffsets = new java.util.HashMap<>();
+	public boolean showSyncInfo = false;
 
 	public float wordPacing = 0.25f;
 	public boolean showLyricsStatus = true;
@@ -136,6 +138,21 @@ public class ModConfig {
 		}
 	}
 
+	public int songOffset(String trackId) {
+		return trackId == null ? 0 : songOffsets.getOrDefault(trackId, 0);
+	}
+
+	public void setSongOffset(String trackId, int ms) {
+		if (trackId == null) return;
+		ms = Math.clamp(ms, -5000, 5000);
+		if (ms == 0) songOffsets.remove(trackId);
+		else songOffsets.put(trackId, ms);
+	}
+
+	public int offsetFor(String trackId) {
+		return syncOffsetMs + songOffset(trackId);
+	}
+
 	public static void reset() {
 		String id = instance != null ? instance.clientId : "";
 		instance = new ModConfig();
@@ -160,5 +177,7 @@ public class ModConfig {
 		worldScale = Math.clamp(worldScale, 0.3f, 4f);
 		worldSpread = Math.clamp(worldSpread, 0f, 3f);
 		syncOffsetMs = Math.clamp(syncOffsetMs, -3000, 3000);
+		if (songOffsets == null) songOffsets = new java.util.HashMap<>();
+		songOffsets.values().removeIf(v -> v == null || v == 0);
 	}
 }

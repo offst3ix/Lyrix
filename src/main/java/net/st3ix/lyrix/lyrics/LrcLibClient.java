@@ -21,15 +21,19 @@ public final class LrcLibClient {
 			.followRedirects(HttpClient.Redirect.NORMAL)
 			.build();
 
-	public String fetchSynced(String title, String artist, String album, long durationMs) throws Exception {
+	public record Found(String lrc, double durationSec) {
+	}
+
+	public Found fetchSynced(String title, String artist, String album, long durationMs) throws Exception {
 		String mainArtist = artist.contains(",") ? artist.substring(0, artist.indexOf(',')).trim() : artist;
 		long durationSec = Math.round(durationMs / 1000.0);
 
 		HttpResponse<String> res = get("/get?track_name=" + enc(title) + "&artist_name=" + enc(mainArtist)
 				+ "&album_name=" + enc(album) + "&duration=" + durationSec);
 		if (res.statusCode() == 200) {
-			String synced = synced(JsonParser.parseString(res.body()).getAsJsonObject());
-			if (synced != null) return synced;
+			JsonObject o = JsonParser.parseString(res.body()).getAsJsonObject();
+			String synced = synced(o);
+			if (synced != null) return new Found(synced, duration(o, durationSec));
 		}
 
 		String cleanTitle = title.replaceAll("\\s*[(\\[].*?[)\\]]", "").replaceAll("\\s+-\\s+.*$", "").trim();
@@ -37,21 +41,24 @@ public final class LrcLibClient {
 		res = get("/search?track_name=" + enc(cleanTitle) + "&artist_name=" + enc(mainArtist));
 		if (res.statusCode() != 200) return null;
 		JsonArray arr = JsonParser.parseString(res.body()).getAsJsonArray();
-		String best = null;
+		Found best = null;
 		double bestDiff = Double.MAX_VALUE;
 		for (JsonElement el : arr) {
 			JsonObject o = el.getAsJsonObject();
 			String synced = synced(o);
 			if (synced == null) continue;
-			double d = o.has("duration") && !o.get("duration").isJsonNull() ? o.get("duration").getAsDouble() : 0;
+			double d = duration(o, 0);
 			double diff = Math.abs(d - durationSec);
-
 			if (diff < bestDiff && diff <= 3) {
 				bestDiff = diff;
-				best = synced;
+				best = new Found(synced, d);
 			}
 		}
 		return best;
+	}
+
+	private static double duration(JsonObject o, double fallback) {
+		return o.has("duration") && !o.get("duration").isJsonNull() ? o.get("duration").getAsDouble() : fallback;
 	}
 
 	private static String synced(JsonObject o) {
