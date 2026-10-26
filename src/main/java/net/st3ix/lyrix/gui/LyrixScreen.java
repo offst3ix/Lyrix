@@ -763,17 +763,17 @@ public final class LyrixScreen extends Screen {
 			ry = step(g, x, ry, w, "4", "Click Connect and allow access in your browser.");
 			button(g, mx, my, x + 24, ry, 150, 22, "Connect with Spotify", true, auth::startLogin);
 			ry += 30;
-
-			int bw = 76;
-			UiDraw.roundRect(g, x, ry, x + w, ry + 28, 9, 0xFF1C2433);
-			UiDraw.icon(g, Icon.LINK, x + 8, ry + 8, 12, 0xFF7AA7FF);
-			UiDraw.text(g, "Not sure how to connect?", x + 26, ry + 5, UiDraw.WHITE);
-			UiDraw.scaledText(g, Fonts.ui(UiDraw.ellipsize("The docs walk you through it step by step.", (int) ((w - bw - 40) / 0.8f))),
-					x + 26, ry + 16, 0.8f, UiDraw.GRAY, false);
-			button(g, mx, my, x + w - bw - 5, ry + 4, bw, 20, "Open guide", false,
-					() -> Util.getPlatform().openUri(URI.create(SETUP_GUIDE)));
-			ry += 34;
 		}
+
+		int bw = 76;
+		UiDraw.roundRect(g, x, ry, x + w, ry + 28, 9, 0xFF1C2433);
+		UiDraw.icon(g, Icon.LINK, x + 8, ry + 8, 12, 0xFF7AA7FF);
+		UiDraw.text(g, auth.isLoggedIn() ? "Something not working?" : "Not sure how to connect?", x + 26, ry + 5, UiDraw.WHITE);
+		UiDraw.scaledText(g, Fonts.ui(UiDraw.ellipsize("The docs walk you through it step by step.", (int) ((w - bw - 40) / 0.8f))),
+				x + 26, ry + 16, 0.8f, UiDraw.GRAY, false);
+		button(g, mx, my, x + w - bw - 5, ry + 4, bw, 20, "Open guide", false,
+				() -> Util.getPlatform().openUri(URI.create(SETUP_GUIDE)));
+		ry += 34;
 		String status = auth.status();
 		if (!status.isEmpty()) {
 			UiDraw.text(g, UiDraw.ellipsize(status, w), x, Math.min(ry, y + h - 10), UiDraw.GRAY);

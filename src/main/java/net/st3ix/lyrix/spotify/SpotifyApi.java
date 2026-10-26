@@ -78,7 +78,9 @@ public final class SpotifyApi {
 	}
 
 	private List<TrackResult> searchPage(String query, int offset) throws Exception {
-		HttpResponse<String> res = send("GET", "/search?type=track&limit=10&offset=" + offset
+		String country = java.util.Locale.getDefault().getCountry();
+		String market = country != null && country.matches("[A-Z]{2}") ? "&market=" + country : "";
+		HttpResponse<String> res = send("GET", "/search?type=track" + market + "&limit=10&offset=" + offset
 				+ "&q=" + SpotifyAuth.enc(query), null);
 		check(res);
 		JsonArray items = JsonParser.parseString(res.body()).getAsJsonObject()
@@ -114,8 +116,15 @@ public final class SpotifyApi {
 	}
 
 	public void play(String trackUri, String deviceId) throws Exception {
-		String path = "/me/player/play" + (deviceId != null ? "?device_id=" + SpotifyAuth.enc(deviceId) : "");
-		check(send("PUT", path, "{\"uris\":[\"" + trackUri + "\"],\"position_ms\":0}"));
+		check(send("PUT", playPath(deviceId), "{\"uris\":[\"" + trackUri + "\"],\"position_ms\":0}"));
+	}
+
+	public void playInAlbum(String trackUri, String albumUri, String deviceId) throws Exception {
+		check(send("PUT", playPath(deviceId), "{\"context_uri\":\"" + albumUri + "\",\"offset\":{\"uri\":\"" + trackUri + "\"},\"position_ms\":0}"));
+	}
+
+	private static String playPath(String deviceId) {
+		return "/me/player/play" + (deviceId != null ? "?device_id=" + SpotifyAuth.enc(deviceId) : "");
 	}
 
 	public void resume() throws Exception {
@@ -213,9 +222,10 @@ public final class SpotifyApi {
 			JsonObject t = el.getAsJsonObject();
 			if (!t.has("uri") || !"track".equals(str(t, "type"))) continue;
 			JsonObject album = t.has("album") ? t.getAsJsonObject("album") : null;
+			if (t.has("is_playable") && !t.get("is_playable").isJsonNull() && !t.get("is_playable").getAsBoolean()) continue;
 			list.add(new TrackResult(str(t, "uri"), str(t, "name"), artists(t),
 					album != null ? str(album, "name") : "", num(t, "duration_ms", 0),
-					album != null ? cover(album) : null));
+					album != null ? cover(album) : null, album != null ? str(album, "uri") : ""));
 		}
 		return list;
 	}

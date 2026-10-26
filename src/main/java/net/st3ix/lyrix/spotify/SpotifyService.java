@@ -152,7 +152,9 @@ public final class SpotifyService {
 		executor.execute(() -> {
 			try {
 				String device = pickDevice();
-				api.play(track.uri(), device);
+				boolean album = track.albumUri() != null && !track.albumUri().isEmpty();
+				if (album) api.playInAlbum(track.uri(), track.albumUri(), device);
+				else api.play(track.uri(), device);
 				if (!startedPlaying(track)) {
 					api.play(track.uri(), device);
 					if (!startedPlaying(track)) {
@@ -183,7 +185,8 @@ public final class SpotifyService {
 		for (int i = 0; i < 4; i++) {
 			Thread.sleep(400);
 			PlaybackState s = api.player();
-			if (s != null && track.uri().equals(s.trackUri()) && s.playing()) {
+			boolean same = s != null && (track.uri().equals(s.trackUri()) || track.title().equalsIgnoreCase(s.title()));
+			if (same && s.playing()) {
 				current = s;
 				return true;
 			}
